@@ -1,0 +1,61 @@
+
+Swap分区：（类似于windows 的虚拟内存，解决物理内存不足的问题）：
+
+Swap 是 Linux 下的交换分区，类似 Windows 的虚拟内存，当物理内存不足时，系统可把一些内存中不常用到的程序放入 Swap，解决物理内存不足的情况。但是如果开始使用 SWAP 的时候系统通常都会变得十分缓慢，因为硬盘 IO 占用的十分厉害，除非是 SSD 的情况下，速度才有可能稍微快一点。
+
+
+下面是创建使用 SWAP 的方法：
+
+一、创建文件
+dd if=/dev/zero of=/swapfile bs=1024 count=1024000         
+SSH 执行以上命令，创建一个名为 swapfile 的 1G 空文件（写 0 占用磁盘）。 (最好在自己定义的目录下创建swapfile 如：/swap/swapfile)
+
+二、制作为 Swap 文件 
+mkswap /swapfile
+SSH 执行以上命令，将生成的 swapfile 制作为 SWAP 文件，若没有制作 SWAP 文件，执行下一步可能会出现：“swapon: vpppscom: read swap header failed: Invalid argument” 错误。
+
+三、让 Swap 文件生效
+swapon /swapfile
+SSH 执行以上命令，使 “swapfile” 这个 Swap 文件生效，并叠加进当前 sawp 空间中。
+
+四、查看当前 SWAP
+swapon -s
+SSH 执行以上命令，查看当前 swap 的情况。
+
+五、自动挂载
+1、编辑/etc/fstab
+vi /etc/fstab
+
+2、按格式填入
+/swapfile swap    swap    defaults      0    0
+
+按格式填入以上信息：
+/dev/vda1 / ext3 noatime,acl,user_xattr 1 1
+proc /proc proc defaults 0 0
+sysfs /sys sysfs noauto 0 0
+debugfs /sys/kernel/debug debugfs noauto 0 0
+devpts /dev/pts devpts mode=0620,gid=5 0 0
+/swapfile swap swap defaults 0 0
+至此未出现任何错误，那么 SWAP 就创建好了，使用 free -m命令就可以看到了。
+
+下面是销毁停用 SWAP 的方法：
+
+1、先停止 swap 分区
+/sbin/swapoff /swapfile
+
+2、删除 swap 分区文件
+rm -rf /swapfile
+
+3、修改 /etc/fstab文件，把
+/swapfile swap swap defaults 0 0
+
+这行删除。 这样就能把手动增加的分区删除了。
+
+PS：
+1、增加删除 swap 的操作只能使用 root 用户来操作。
+2、装系统时分配的 swap 分区貌似删除不了。
+3、swap 分区一般为内存的 2 倍，但最大不超过 2G
+4、还有尽量不让过早占用 SWAP 可以设置 vm.swappiness 值到 0，这样就不会过早的占用 SWAP 影响 IO
+
+编辑 /etc/sysctl.conf
+加入 vm.swappiness=0
